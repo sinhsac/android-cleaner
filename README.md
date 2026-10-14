@@ -13,11 +13,18 @@ Bạn chọn thư mục một lần qua trình chọn của hệ thống (Storag
 - **Dọn ngay**: xóa, có hộp xác nhận.
 - **Dọn tự động**: WorkManager chạy định kỳ theo chu kỳ giờ bạn đặt (tối thiểu 1 giờ), hiện thông báo kết quả.
 
-## Cách truy cập thư mục của Kabe View
+## Cách truy cập thư mục của Kabe View (Android/data)
 
-Kabe View thường lưu video 2 nơi: thư viện ảnh (Photos/MediaStore) và thư mục data của app. Nếu thư mục data đó là **external** (`/storage/emulated/0/Android/data/com.<kabe>/...`) thì SAF chọn và xóa được bình thường. Nếu là **internal** (`/data/data/...`) thì **không app nào xóa được nếu không root** — khi đó chỉ còn cách "Clear data" trong Settings.
+Thư mục Kabe View dạng `/storage/emulated/0/Android/data/com.mm.android.direct.KB/files/Downloads`.
 
-> Dùng nút Browse, điều hướng đến đúng thư mục bạn vẫn mở bằng ES Explorer. Nếu chọn được và "Quét thử" ra số file > 0 thì xóa được.
+Trên **Android 11**, cả SAF lẫn `MANAGE_EXTERNAL_STORAGE` đều **bị chặn** truy cập `Android/data` của app khác. Cách duy nhất không-root còn mở là **bắt chước ES Explorer**: build app với `targetSdk` thấp (28) + legacy storage. Khi đó app xin `READ/WRITE_EXTERNAL_STORAGE` kiểu cũ và truy cập thẳng đường dẫn tuyệt đối bằng `java.io.File`, vào được `Android/data` như ES Explorer.
+
+App vì vậy có **2 chế độ**:
+
+1. **Đường dẫn tuyệt đối (mặc định, khuyến nghị)** — ô "Đường dẫn thư mục cần dọn" đã điền sẵn đường dẫn Kabe View. Bấm "Cấp quyền truy cập bộ nhớ", rồi "Quét thử" / "Dọn ngay".
+2. **SAF (phụ)** — nút "Chọn thư mục (SAF)". Thường bị chặn với `Android/data` trên Android 11, chỉ dùng cho thư mục công khai.
+
+> Nếu đổi đường dẫn, chỉ cần dán đường dẫn khác vào ô đó.
 
 ## Build
 

@@ -124,6 +124,68 @@ object CleanerEngine {
         return Result(matched, deleted, totalBytes, errors, dryRun)
     }
 
+    /**
+     * Quét (và tùy chọn xóa) file khớp đuôi trong một thư mục cho bởi ĐƯỜNG DẪN TUYỆT ĐỐI,
+     * dùng java.io.File (legacy storage) — không qua SAF. Dành cho Android/data trên Android 11
+     * khi app target API thấp.
+     */
+    fun runPath(
+        absolutePath: String,
+        extensions: List<String>,
+        recursive: Boolean,
+        dryRun: Boolean
+    ): Result {
+        if (extensions.isEmpty()) {
+            return Result(0, 0, 0L, listOf("Chưa cấu hình đuôi file nào."), dryRun)
+        }
+        val root = java.io.File(absolutePath)
+        if (!root.exists()) {
+            return Result(0, 0, 0L, listOf("Thư mục không tồn tại hoặc không đọc được: $absolutePath"), dryRun)
+        }
+        if (!root.isDirectory) {
+            return Result(0, 0, 0L, listOf("Đường dẫn không phải thư mục: $absolutePath"), dryRun)
+        }
+
+        val extSet = extensions.map { it.lowercase() }.toSet()
+        var matched = 0
+        var deleted = 0
+        var totalBytes = 0L
+        val errors = ArrayList<String>()
+
+        val dirQueue = ArrayDeque<java.io.File>()
+        dirQueue.add(root)
+
+        while (dirQueue.isNotEmpty()) {
+            val dir = dirQueue.removeFirst()
+            val children = dir.listFiles()
+            if (children == null) {
+                errors.add("Không liệt kê được: ${dir.absolutePath}")
+                continue
+            }
+            for (f in children) {
+                if (f.isDirectory) {
+                    if (recursive) dirQueue.add(f)
+                    continue
+                }
+                val ext = f.name.substringAfterLast('.', "").lowercase()
+                if (ext.isNotEmpty() && extSet.contains(ext)) {
+                    matched++
+                    totalBytes += f.length()
+                    if (!dryRun) {
+                        val ok = try {
+                            f.delete()
+                        } catch (e: Exception) {
+                            Log.w(TAG, "Xóa thất bại: ${f.name}", e)
+                            false
+                        }
+                        if (ok) deleted++ else errors.add("Xóa thất bại: ${f.name}")
+                    }
+                }
+            }
+        }
+        return Result(matched, deleted, totalBytes, errors, dryRun)
+    }
+
     /** Định dạng dung lượng cho dễ đọc. */
     fun formatBytes(bytes: Long): String {
         if (bytes < 1024) return "$bytes B"

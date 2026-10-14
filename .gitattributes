@@ -1,0 +1,9 @@
+# Giữ gradlew luôn là LF để chạy trên Linux runner (tránh lỗi 'sh\r').
+gradlew text eol=lf
+*.sh text eol=lf
+
+# Script Windows giữ CRLF
+*.bat text eol=crlf
+
+# Mặc định: chuẩn hóa text, tự nhận diện
+* text=auto

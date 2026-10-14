@@ -17,6 +17,16 @@ class Prefs(context: Context) {
         get() = sp.getString(KEY_TREE_URI, null)
         set(value) = sp.edit().putString(KEY_TREE_URI, value).apply()
 
+    /** Đường dẫn tuyệt đối (legacy File API). Đây là chế độ chính cho Android/data. */
+    var absolutePath: String
+        get() = sp.getString(KEY_ABS_PATH, DEFAULT_PATH) ?: DEFAULT_PATH
+        set(value) = sp.edit().putString(KEY_ABS_PATH, value).apply()
+
+    /** true = dùng đường dẫn tuyệt đối (File API); false = dùng SAF treeUri. */
+    var usePathMode: Boolean
+        get() = sp.getBoolean(KEY_USE_PATH, true)
+        set(value) = sp.edit().putBoolean(KEY_USE_PATH, value).apply()
+
     var extensionsRaw: String
         get() = sp.getString(KEY_EXTENSIONS, DEFAULT_EXTENSIONS) ?: DEFAULT_EXTENSIONS
         set(value) = sp.edit().putString(KEY_EXTENSIONS, value).apply()
@@ -50,8 +60,12 @@ class Prefs(context: Context) {
     companion object {
         const val DEFAULT_EXTENSIONS = "mp4,jpg"
         const val DEFAULT_INTERVAL_HOURS = 24
+        const val DEFAULT_PATH =
+            "/storage/emulated/0/Android/data/com.mm.android.direct.KB/files/Downloads"
 
         private const val KEY_TREE_URI = "tree_uri"
+        private const val KEY_ABS_PATH = "abs_path"
+        private const val KEY_USE_PATH = "use_path"
         private const val KEY_EXTENSIONS = "extensions"
         private const val KEY_RECURSIVE = "recursive"
         private const val KEY_AUTO_ENABLED = "auto_enabled"

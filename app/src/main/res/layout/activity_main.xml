@@ -30,21 +30,52 @@
                     android:text="@string/section_folder"
                     android:textAppearance="?attr/textAppearanceTitleMedium" />
 
+                <com.google.android.material.textfield.TextInputLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:hint="@string/hint_path"
+                    app:helperText="@string/helper_path"
+                    app:helperTextEnabled="true">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etPath"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="textNoSuggestions|textMultiLine"
+                        android:maxLines="3" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnGrant"
+                    style="@style/Widget.Material3.Button.TonalButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="@string/btn_grant_storage" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="@string/or_use_saf"
+                    android:textAppearance="?attr/textAppearanceLabelSmall" />
+
                 <TextView
                     android:id="@+id/tvFolder"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
+                    android:layout_marginTop="4dp"
                     android:text="@string/no_folder"
-                    android:textAppearance="?attr/textAppearanceBodyMedium"
+                    android:textAppearance="?attr/textAppearanceBodySmall"
                     android:textIsSelectable="true" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnBrowse"
+                    style="@style/Widget.Material3.Button.TextButton"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    app:icon="@android:drawable/ic_menu_more"
+                    android:layout_marginTop="4dp"
                     android:text="@string/btn_browse" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>

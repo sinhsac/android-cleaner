@@ -24,31 +24,40 @@ class CleanupWorker(
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         val prefs = Prefs(applicationContext)
-        val uriStr = prefs.treeUri ?: return@withContext Result.success()
         val exts = prefs.parsedExtensions()
         if (exts.isEmpty()) return@withContext Result.success()
 
-        val treeUri = Uri.parse(uriStr)
-
-        // Kiểm tra quyền trên URI còn hiệu lực không (người dùng có thể đã thu hồi).
-        val stillGranted = applicationContext.contentResolver.persistedUriPermissions.any {
-            it.uri == treeUri && it.isWritePermission
-        }
-        if (!stillGranted) {
-            notify(
-                applicationContext.getString(R.string.notif_title),
-                applicationContext.getString(R.string.notif_permission_lost)
+        val result = if (prefs.usePathMode) {
+            // Chế độ chính: xóa theo đường dẫn tuyệt đối (legacy File API).
+            if (prefs.absolutePath.isBlank()) return@withContext Result.success()
+            CleanerEngine.runPath(
+                absolutePath = prefs.absolutePath,
+                extensions = exts,
+                recursive = prefs.recursive,
+                dryRun = false
             )
-            return@withContext Result.success()
+        } else {
+            // Chế độ phụ: SAF.
+            val uriStr = prefs.treeUri ?: return@withContext Result.success()
+            val treeUri = Uri.parse(uriStr)
+            val stillGranted = applicationContext.contentResolver.persistedUriPermissions.any {
+                it.uri == treeUri && it.isWritePermission
+            }
+            if (!stillGranted) {
+                notify(
+                    applicationContext.getString(R.string.notif_title),
+                    applicationContext.getString(R.string.notif_permission_lost)
+                )
+                return@withContext Result.success()
+            }
+            CleanerEngine.run(
+                context = applicationContext,
+                treeUri = treeUri,
+                extensions = exts,
+                recursive = prefs.recursive,
+                dryRun = false
+            )
         }
-
-        val result = CleanerEngine.run(
-            context = applicationContext,
-            treeUri = treeUri,
-            extensions = exts,
-            recursive = prefs.recursive,
-            dryRun = false
-        )
 
         val summary = applicationContext.getString(
             R.string.notif_summary,
