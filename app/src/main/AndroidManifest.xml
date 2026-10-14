@@ -1,28 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!--
-      Lưu ý về quyền:
-      - App chủ yếu truy cập file qua SAF (OPEN_DOCUMENT_TREE) nên KHÔNG bắt buộc
-        xin quyền lưu trữ. Quyền truy cập thư mục được cấp qua persistable URI.
-      - POST_NOTIFICATIONS cần cho Android 13+ để hiển thị thông báo kết quả dọn tự động.
-    -->
+    <!-- Cần cho Android 13+ để hiện thông báo kết quả dọn tự động. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <!--
-      Quyền lưu trữ kiểu cũ (legacy). Vì app target API 28, Android 11 cho dùng
-      READ/WRITE_EXTERNAL_STORAGE truy cập thẳng /storage/emulated/0, kể cả Android/data.
-      maxSdkVersion để không thừa quyền trên các bản Android mới hơn (nếu nâng target sau này).
+      Thư mục trong Android/data KHÔNG truy cập được bằng quyền lưu trữ, bất kể quyền nào:
+      đã thử trên SM-A507FN/Android 11 với legacy storage (targetSdk 28) và với
+      MANAGE_EXTERNAL_STORAGE ("Truy cập tất cả tệp") — cả hai đều cho listFiles() = null.
+      Cách duy nhất là SAF tree grant, nên app không xin MANAGE_EXTERNAL_STORAGE.
+
+      READ_EXTERNAL_STORAGE chỉ còn dùng cho các thư mục thường (DCIM, Download...) qua
+      java.io.File. WRITE_EXTERNAL_STORAGE là no-op từ API 29 nên giới hạn ở maxSdkVersion.
     -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
 
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
-        android:requestLegacyExternalStorage="true"
-        android:preserveLegacyExternalStorage="true"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.FolderCleaner">

@@ -9,14 +9,14 @@
 
     <!-- Folder: path mode (chính) -->
     <string name="hint_path">Đường dẫn thư mục cần dọn</string>
-    <string name="helper_path">Dán đường dẫn tuyệt đối, ví dụ /storage/emulated/0/Android/data/com.mm.android.direct.KB/files/Downloads</string>
+    <string name="helper_path">Dán đường dẫn tuyệt đối, ví dụ /storage/emulated/0/Android/data/com.mm.android.direct.KBVISIONVIEWPlus/files/Download</string>
     <string name="btn_grant_storage">Cấp quyền truy cập bộ nhớ</string>
     <string name="storage_granted">Đã có quyền truy cập bộ nhớ.</string>
     <string name="storage_denied">Chưa được cấp quyền. App sẽ không xóa được file.</string>
 
-    <!-- Folder: SAF mode (phụ) -->
-    <string name="or_use_saf">Hoặc chọn thư mục bằng trình chọn hệ thống (SAF — có thể bị Android 11 chặn với Android/data):</string>
-    <string name="no_folder">Chưa chọn thư mục SAF.</string>
+    <!-- Folder: SAF — bắt buộc với Android/data trên Android 11 -->
+    <string name="or_use_saf">Với thư mục trong Android/data, bắt buộc cấp quyền qua trình chọn hệ thống. Bấm nút dưới rồi chọn "Sử dụng thư mục này":</string>
+    <string name="no_folder">Chưa cấp quyền cho thư mục này.</string>
     <string name="saf_selected">SAF: %1$s</string>
     <string name="btn_browse">Chọn thư mục (SAF)</string>
     <string name="folder_selected">Đã chọn thư mục SAF và cấp quyền.</string>

@@ -17,6 +17,10 @@ object CleanupScheduler {
     fun schedule(context: Context, intervalHours: Int) {
         val hours = intervalHours.coerceAtLeast(1).toLong()
         val request = PeriodicWorkRequestBuilder<CleanupWorker>(hours, TimeUnit.HOURS)
+            // Không có initial delay thì WorkManager chạy lần đầu NGAY lập tức, nghĩa là
+            // vừa bật công tắc là xóa thật, không kịp xem lại. Lần xóa đầu phải đợi
+            // đủ một chu kỳ — vừa đúng nghĩa "mỗi N giờ", vừa có thời gian tắt nếu nhầm.
+            .setInitialDelay(hours, TimeUnit.HOURS)
             .build()
 
         WorkManager.getInstance(context).enqueueUniquePeriodicWork(

@@ -23,7 +23,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private lateinit var prefs: Prefs
 
-    /** Chọn thư mục qua SAF (phương án phụ). */
+    /** Cấp quyền thư mục qua SAF — bắt buộc với Android/data, tùy chọn với thư mục thường. */
     private val pickFolder = registerForActivityResult(
         ActivityResultContracts.OpenDocumentTree()
     ) { uri: Uri? ->
@@ -33,7 +33,17 @@ class MainActivity : AppCompatActivity() {
             try {
                 contentResolver.takePersistableUriPermission(uri, flags)
                 prefs.treeUri = uri.toString()
-                prefs.usePathMode = false   // vừa chọn SAF -> chuyển sang chế độ SAF
+
+                // Đồng bộ ô đường dẫn với thư mục vừa được cấp, để mục tiêu quét
+                // và quyền luôn khớp nhau.
+                val granted = runCatching { DocumentsContract.getTreeDocumentId(uri) }
+                    .getOrNull()
+                    ?.let { CleanerEngine.pathForDocId(it) }
+                if (granted != null && granted != prefs.absolutePath) {
+                    prefs.absolutePath = granted
+                    binding.etPath.setText(granted)
+                }
+
                 refreshFolderLabel()
                 snack(getString(R.string.folder_selected))
             } catch (e: Exception) {
@@ -69,7 +79,11 @@ class MainActivity : AppCompatActivity() {
 
         binding.btnGrant.setOnClickListener { requestStoragePermission() }
 
-        binding.btnBrowse.setOnClickListener { pickFolder.launch(null) }
+        // Mở picker ngay tại thư mục đang nhập, để chỉ cần bấm "Sử dụng thư mục này".
+        binding.btnBrowse.setOnClickListener {
+            persistConfig()
+            pickFolder.launch(CleanerEngine.initialPickerUri(prefs.absolutePath))
+        }
 
         binding.btnDryRun.setOnClickListener { persistConfig(); startRun(dryRun = true) }
         binding.btnClean.setOnClickListener { persistConfig(); confirmAndClean() }
@@ -99,15 +113,15 @@ class MainActivity : AppCompatActivity() {
         persistConfig()
     }
 
-    /** Có mục tiêu hợp lệ để dọn chưa? (path mode cần path; SAF mode cần treeUri) */
-    private fun hasTarget(): Boolean =
-        if (prefs.usePathMode) prefs.absolutePath.isNotBlank() else prefs.treeUri != null
+    /** Mục tiêu luôn là đường dẫn tuyệt đối; SAF chỉ là cách truy cập nó. */
+    private fun hasTarget(): Boolean = prefs.absolutePath.isNotBlank()
 
     private fun persistConfig() {
-        val path = binding.etPath.text?.toString()?.trim().orEmpty()
-        if (path.isNotEmpty()) {
+        val raw = binding.etPath.text?.toString()?.trim().orEmpty()
+        if (raw.isNotEmpty()) {
+            val path = CleanerEngine.normalizePath(raw)
+            if (path != raw) binding.etPath.setText(path)
             prefs.absolutePath = path
-            prefs.usePathMode = true   // có nhập path -> ưu tiên chế độ path
         }
         prefs.extensionsRaw = (binding.etExtensions.text?.toString()?.trim().orEmpty())
             .ifEmpty { Prefs.DEFAULT_EXTENSIONS }
@@ -122,12 +136,13 @@ class MainActivity : AppCompatActivity() {
         CleanupScheduler.schedule(this, prefs.autoIntervalHours)
     }
 
+    /** Hiện grant nào đang phủ đường dẫn đích, hoặc báo chưa có. */
     private fun refreshFolderLabel() {
-        val uriStr = prefs.treeUri
-        binding.tvFolder.text = if (uriStr == null) {
+        val grant = CleanerEngine.findGrant(applicationContext, prefs.absolutePath)
+        binding.tvFolder.text = if (grant == null) {
             getString(R.string.no_folder)
         } else {
-            getString(R.string.saf_selected, friendlyPath(Uri.parse(uriStr)))
+            getString(R.string.saf_selected, friendlyPath(grant.first))
         }
     }
 
@@ -175,31 +190,20 @@ class MainActivity : AppCompatActivity() {
             return
         }
         val recursive = binding.swRecursive.isChecked
-        val usePath = prefs.usePathMode
         val path = prefs.absolutePath
-        val treeUriStr = prefs.treeUri
 
         setBusy(true)
         binding.tvResult.text = getString(R.string.running)
 
         lifecycleScope.launch {
             val result = withContext(Dispatchers.IO) {
-                if (usePath) {
-                    CleanerEngine.runPath(
-                        absolutePath = path,
-                        extensions = exts,
-                        recursive = recursive,
-                        dryRun = dryRun
-                    )
-                } else {
-                    CleanerEngine.run(
-                        context = applicationContext,
-                        treeUri = Uri.parse(treeUriStr),
-                        extensions = exts,
-                        recursive = recursive,
-                        dryRun = dryRun
-                    )
-                }
+                CleanerEngine.clean(
+                    context = applicationContext,
+                    absolutePath = path,
+                    extensions = exts,
+                    recursive = recursive,
+                    dryRun = dryRun
+                )
             }
             setBusy(false)
             val text = formatResult(result)
@@ -236,11 +240,22 @@ class MainActivity : AppCompatActivity() {
         binding.btnGrant.isEnabled = !busy
     }
 
+    /**
+     * Chỉ phục vụ các thư mục thường (DCIM, Download...) khi quét bằng java.io.File.
+     *
+     * Với `Android/data` thì quyền này vô nghĩa — kể cả "Truy cập tất cả tệp"
+     * (MANAGE_EXTERNAL_STORAGE) cũng không đọc được, đã thử trên Android 11.
+     * Đường duy nhất là nút "Chọn thư mục (SAF)".
+     */
     private fun requestStoragePermission() {
-        val perms = arrayOf(
-            Manifest.permission.READ_EXTERNAL_STORAGE,
-            Manifest.permission.WRITE_EXTERNAL_STORAGE
-        )
+        val perms = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
+        } else {
+            arrayOf(
+                Manifest.permission.READ_EXTERNAL_STORAGE,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE
+            )
+        }
         val allGranted = perms.all {
             ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED
         }

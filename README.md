@@ -6,25 +6,42 @@ Bạn chọn thư mục một lần qua trình chọn của hệ thống (Storag
 
 ## Tính năng
 
-- **Chọn thư mục (Browse)**: mở trình chọn hệ thống, điều hướng tới đúng thư mục cần dọn (kể cả `Android/data/...` mà Android 11+ chặn truy cập trực tiếp). Chọn 1 lần, dùng mãi.
+- **Chọn thư mục (SAF)**: mở trình chọn hệ thống ngay tại thư mục cần dọn (kể cả `Android/data/...` mà Android 11+ chặn truy cập trực tiếp). Cấp quyền 1 lần, dùng mãi.
 - **Cấu hình đuôi file**: mặc định `mp4,jpg`, sửa được (ví dụ `mp4,jpg,jpeg,mkv`).
 - **Quét cả thư mục con**: bật/tắt.
 - **Quét thử**: đếm số file khớp và tổng dung lượng, **không xóa** — xem trước cho yên tâm.
 - **Dọn ngay**: xóa, có hộp xác nhận.
-- **Dọn tự động**: WorkManager chạy định kỳ theo chu kỳ giờ bạn đặt (tối thiểu 1 giờ), hiện thông báo kết quả.
+- **Dọn tự động**: WorkManager chạy định kỳ theo chu kỳ giờ bạn đặt (tối thiểu 1 giờ), hiện thông báo kết quả. Lần xóa đầu tiên đợi đủ một chu kỳ, không xóa ngay khi vừa bật công tắc.
 
 ## Cách truy cập thư mục của Kabe View (Android/data)
 
-Thư mục Kabe View dạng `/storage/emulated/0/Android/data/com.mm.android.direct.KB/files/Downloads`.
+Thư mục Kabe View trên máy thật là:
 
-Trên **Android 11**, cả SAF lẫn `MANAGE_EXTERNAL_STORAGE` đều **bị chặn** truy cập `Android/data` của app khác. Cách duy nhất không-root còn mở là **bắt chước ES Explorer**: build app với `targetSdk` thấp (28) + legacy storage. Khi đó app xin `READ/WRITE_EXTERNAL_STORAGE` kiểu cũ và truy cập thẳng đường dẫn tuyệt đối bằng `java.io.File`, vào được `Android/data` như ES Explorer.
+```
+/storage/emulated/0/Android/data/com.mm.android.direct.KBVISIONVIEWPlus/files/Download
+```
 
-App vì vậy có **2 chế độ**:
+Trên **Android 11, cách duy nhất không-root là SAF tree grant**. Cụ thể:
 
-1. **Đường dẫn tuyệt đối (mặc định, khuyến nghị)** — ô "Đường dẫn thư mục cần dọn" đã điền sẵn đường dẫn Kabe View. Bấm "Cấp quyền truy cập bộ nhớ", rồi "Quét thử" / "Dọn ngay".
-2. **SAF (phụ)** — nút "Chọn thư mục (SAF)". Thường bị chặn với `Android/data` trên Android 11, chỉ dùng cho thư mục công khai.
+1. Bấm **"Chọn thư mục (SAF)"**. App mở trình chọn hệ thống **ngay tại** thư mục đang điền trong ô đường dẫn (qua `EXTRA_INITIAL_URI`).
+2. Bấm **"Sử dụng thư mục này"**.
 
-> Nếu đổi đường dẫn, chỉ cần dán đường dẫn khác vào ô đó.
+Bước 1 là mấu chốt: trình chọn của Android 11 **ẩn** `Android/data` khi bạn duyệt xuống từng cấp, nhưng nếu mở thẳng vào bên trong thì nút "Sử dụng thư mục này" vẫn cấp quyền bình thường. Grant thuộc dạng `prefix` nên từ một thư mục cấp trên vẫn quét được thư mục con. Đây đúng là cách ES File Explorer làm — nó giữ grant trên `primary:Android/data`.
+
+Sau khi có grant, app giữ vĩnh viễn và `CleanerEngine.clean()` tự chọn SAF. Với thư mục thường (DCIM, Download...) không cần grant, app dùng `java.io.File`.
+
+### Những cách KHÔNG hoạt động
+
+Đã đo trực tiếp trên Samsung SM-A507FN / Android 11:
+
+| Cách | Kết quả |
+|---|---|
+| `targetSdk 28` + `requestLegacyExternalStorage` | `listFiles()` trả `null` |
+| `MANAGE_EXTERNAL_STORAGE` ("Truy cập tất cả tệp") | vẫn `null`, kể cả khi appop bật ở mức uid |
+
+Lý do: process app chỉ thuộc group `9997 (everybody)`, không có `1015 (sdcard_rw)`, mà `Android/data` là `drwxrwx--x root:sdcard_rw`. App rơi vào bit "other" là `--x` — đi xuyên qua được nếu biết tên chính xác, nhưng không liệt kê và không xóa được. Không phải lỗi SELinux (logcat không có AVC denial nào).
+
+> Nếu đổi thư mục đích: dán đường dẫn mới vào ô đường dẫn, rồi bấm "Chọn thư mục (SAF)" để cấp quyền cho thư mục đó.
 
 ## Build
 
@@ -72,9 +89,10 @@ Hoặc copy APK vào máy và cài tay (bật "Cài từ nguồn không xác đ�
 
 ## Lưu ý quyền
 
-- App **không** xin quyền lưu trữ toàn bộ; nó chỉ dùng quyền trên đúng thư mục bạn chọn (an toàn hơn).
+- App **không** xin `MANAGE_EXTERNAL_STORAGE`; nó chỉ dùng quyền trên đúng thư mục bạn cấp (an toàn hơn, và quyền đó cũng không giúp gì với `Android/data`).
+- `READ_EXTERNAL_STORAGE` chỉ dùng cho các thư mục thường khi quét bằng `java.io.File`.
 - Android 13+: khi bật dọn tự động, app xin quyền thông báo để báo kết quả.
-- Nếu một ngày app báo "mất quyền truy cập thư mục", chỉ cần mở app và bấm Browse chọn lại.
+- Nếu một ngày app báo "mất quyền truy cập thư mục", mở app và bấm "Chọn thư mục (SAF)" để cấp lại.
 
 ## Giới hạn kỹ thuật
 

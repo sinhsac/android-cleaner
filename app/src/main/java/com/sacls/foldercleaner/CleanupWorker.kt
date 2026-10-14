@@ -4,7 +4,6 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
 import android.content.pm.PackageManager
-import android.net.Uri
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -27,37 +26,27 @@ class CleanupWorker(
         val exts = prefs.parsedExtensions()
         if (exts.isEmpty()) return@withContext Result.success()
 
-        val result = if (prefs.usePathMode) {
-            // Chế độ chính: xóa theo đường dẫn tuyệt đối (legacy File API).
-            if (prefs.absolutePath.isBlank()) return@withContext Result.success()
-            CleanerEngine.runPath(
-                absolutePath = prefs.absolutePath,
-                extensions = exts,
-                recursive = prefs.recursive,
-                dryRun = false
+        val path = prefs.absolutePath
+        if (path.isBlank()) return@withContext Result.success()
+
+        // Android/data chỉ truy cập được qua SAF. Nếu grant bị thu hồi thì báo cho người dùng
+        // thay vì im lặng xoá 0 file mỗi lần chạy.
+        val needsSaf = CleanerEngine.docIdForPath(path)?.startsWith("primary:Android/") == true
+        if (needsSaf && CleanerEngine.findGrant(applicationContext, path) == null) {
+            notify(
+                applicationContext.getString(R.string.notif_title),
+                applicationContext.getString(R.string.notif_permission_lost)
             )
-        } else {
-            // Chế độ phụ: SAF.
-            val uriStr = prefs.treeUri ?: return@withContext Result.success()
-            val treeUri = Uri.parse(uriStr)
-            val stillGranted = applicationContext.contentResolver.persistedUriPermissions.any {
-                it.uri == treeUri && it.isWritePermission
-            }
-            if (!stillGranted) {
-                notify(
-                    applicationContext.getString(R.string.notif_title),
-                    applicationContext.getString(R.string.notif_permission_lost)
-                )
-                return@withContext Result.success()
-            }
-            CleanerEngine.run(
-                context = applicationContext,
-                treeUri = treeUri,
-                extensions = exts,
-                recursive = prefs.recursive,
-                dryRun = false
-            )
+            return@withContext Result.success()
         }
+
+        val result = CleanerEngine.clean(
+            context = applicationContext,
+            absolutePath = path,
+            extensions = exts,
+            recursive = prefs.recursive,
+            dryRun = false
+        )
 
         val summary = applicationContext.getString(
             R.string.notif_summary,

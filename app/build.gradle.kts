@@ -10,9 +10,12 @@ android {
     defaultConfig {
         applicationId = "com.sacls.foldercleaner"
         minSdk = 24
-        // Target 28 (Android 9) để dùng legacy storage: trên Android 11/Samsung One UI,
-        // app target thấp vẫn truy cập được Android/data của app khác (giống ES Explorer).
-        targetSdk = 28
+        // Trước đây để 28 nhằm dùng legacy storage, với giả định app target thấp vẫn đọc
+        // được Android/data của app khác. Giả định đó sai: đã đo trên SM-A507FN/Android 11,
+        // process app chỉ thuộc group 9997 (everybody) chứ không có 1015 (sdcard_rw), mà
+        // Android/data là drwxrwx--x root:sdcard_rw -> chỉ đi xuyên qua được, không liệt kê.
+        // Truy cập đi qua SAF nên không phụ thuộc targetSdk; giữ 30 cho đúng scoped storage.
+        targetSdk = 30
         versionCode = 1
         versionName = "1.0"
     }

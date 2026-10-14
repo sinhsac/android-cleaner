@@ -10,3 +10,6 @@
 /app/build/
 /*.log
 
+# APK (kể cả APK của app khác dùng để đối chiếu khi debug)
+*.apk
+
