@@ -23,8 +23,13 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+      # Runner ubuntu-latest đã cài sẵn Android SDK (ANDROID_HOME/ANDROID_SDK_ROOT).
+      # Không dùng android-actions/setup-android vì bản v3 lỗi "Failed to find package 'tools'".
+      - name: Accept Android SDK licenses
+        run: yes | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null 2>&1 || true
+
+      - name: Point local.properties to runner SDK
+        run: echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
 
       - name: Grant execute permission for gradlew
         run: chmod +x ./gradlew
@@ -54,7 +59,7 @@ jobs:
       - name: Generate QR code to the APK download URL
         if: startsWith(github.ref, 'refs/tags/')
         run: |
-          python3 -m pip install --quiet "qrcode[pil]"
+          python3 -m pip install --quiet "qrcode[pil]" || python3 -m pip install --quiet --break-system-packages "qrcode[pil]"
           APK_URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/${{ steps.apk.outputs.apk_name }}"
           echo "APK_URL=$APK_URL"
           python3 - "$APK_URL" <<'PY'
