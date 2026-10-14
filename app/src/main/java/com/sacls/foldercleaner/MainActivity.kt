@@ -1,278 +1,190 @@
 package com.sacls.foldercleaner
 
-import android.Manifest
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
-import android.provider.DocumentsContract
-import androidx.activity.result.contract.ActivityResultContracts
+import android.view.View
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.GridLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.button.MaterialButton
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
-import com.sacls.foldercleaner.databinding.ActivityMainBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+/**
+ * Màn hình chính: lưới thumbnail các file quét được từ thư mục đã cấu hình.
+ * Mở app -> tự quét. Có nút "Dọn ngay" và menu mở Cấu hình / Chuyển DCIM.
+ */
 class MainActivity : AppCompatActivity() {
 
-    private lateinit var binding: ActivityMainBinding
     private lateinit var prefs: Prefs
+    private lateinit var thumbLoader: ThumbLoader
+    private lateinit var adapter: MediaAdapter
 
-    /** Cấp quyền thư mục qua SAF — bắt buộc với Android/data, tùy chọn với thư mục thường. */
-    private val pickFolder = registerForActivityResult(
-        ActivityResultContracts.OpenDocumentTree()
-    ) { uri: Uri? ->
-        if (uri != null) {
-            val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or
-                Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-            try {
-                contentResolver.takePersistableUriPermission(uri, flags)
-                prefs.treeUri = uri.toString()
+    private lateinit var recycler: RecyclerView
+    private lateinit var emptyState: View
+    private lateinit var tvEmpty: android.widget.TextView
+    private lateinit var btnEmptyAction: MaterialButton
+    private lateinit var progressScan: View
+    private lateinit var tvSummary: android.widget.TextView
+    private lateinit var btnCleanNow: MaterialButton
 
-                // Đồng bộ ô đường dẫn với thư mục vừa được cấp, để mục tiêu quét
-                // và quyền luôn khớp nhau.
-                val granted = runCatching { DocumentsContract.getTreeDocumentId(uri) }
-                    .getOrNull()
-                    ?.let { CleanerEngine.pathForDocId(it) }
-                if (granted != null && granted != prefs.absolutePath) {
-                    prefs.absolutePath = granted
-                    binding.etPath.setText(granted)
-                }
-
-                refreshFolderLabel()
-                snack(getString(R.string.folder_selected))
-            } catch (e: Exception) {
-                snack(getString(R.string.folder_grant_failed, e.message ?: ""))
-            }
-        }
-    }
-
-    private val requestNotif = registerForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { }
-
-    private val requestStorage = registerForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions()
-    ) { result ->
-        val granted = result.values.all { it }
-        snack(if (granted) getString(R.string.storage_granted) else getString(R.string.storage_denied))
-    }
+    /** Danh sách file hiện có trên lưới, giữ để biết cái gì sẽ bị xóa. */
+    private var current: List<CleanerEngine.MediaItem> = emptyList()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        binding = ActivityMainBinding.inflate(layoutInflater)
-        setContentView(binding.root)
+        setContentView(R.layout.activity_main)
         prefs = Prefs(this)
+        thumbLoader = ThumbLoader(this, lifecycleScope)
 
-        binding.etPath.setText(prefs.absolutePath)
-        binding.etExtensions.setText(prefs.extensionsRaw)
-        binding.swRecursive.isChecked = prefs.recursive
-        binding.swAuto.isChecked = prefs.autoEnabled
-        binding.etInterval.setText(prefs.autoIntervalHours.toString())
-        prefs.lastResult?.let { binding.tvResult.text = it }
-        refreshFolderLabel()
+        findViewById<MaterialToolbar>(R.id.toolbar).setOnMenuItemClickListener { onMenu(it.itemId) }
+        recycler = findViewById(R.id.recycler)
+        emptyState = findViewById(R.id.emptyState)
+        tvEmpty = findViewById(R.id.tvEmpty)
+        btnEmptyAction = findViewById(R.id.btnEmptyAction)
+        progressScan = findViewById(R.id.progressScan)
+        tvSummary = findViewById(R.id.tvSummary)
+        btnCleanNow = findViewById(R.id.btnCleanNow)
 
-        binding.btnGrant.setOnClickListener { requestStoragePermission() }
+        adapter = MediaAdapter(thumbLoader) { openItem(it) }
+        recycler.layoutManager = GridLayoutManager(this, spanCount())
+        recycler.adapter = adapter
+        recycler.setHasFixedSize(true)
 
-        // Mở picker ngay tại thư mục đang nhập, để chỉ cần bấm "Sử dụng thư mục này".
-        binding.btnBrowse.setOnClickListener {
-            persistConfig()
-            pickFolder.launch(CleanerEngine.initialPickerUri(prefs.absolutePath))
-        }
-
-        binding.btnDryRun.setOnClickListener { persistConfig(); startRun(dryRun = true) }
-        binding.btnClean.setOnClickListener { persistConfig(); confirmAndClean() }
-
-        binding.swAuto.setOnCheckedChangeListener { _, isChecked ->
-            prefs.autoEnabled = isChecked
-            if (isChecked) {
-                persistConfig()
-                if (!hasTarget()) {
-                    binding.swAuto.isChecked = false
-                    prefs.autoEnabled = false
-                    snack(getString(R.string.need_folder_first))
-                    return@setOnCheckedChangeListener
-                }
-                ensureNotifPermission()
-                applyAutoSchedule()
-                snack(getString(R.string.auto_on))
-            } else {
-                CleanupScheduler.cancel(this)
-                snack(getString(R.string.auto_off))
-            }
-        }
+        btnEmptyAction.setOnClickListener { openSettings() }
+        btnCleanNow.setOnClickListener { confirmClean() }
     }
 
-    override fun onPause() {
-        super.onPause()
-        persistConfig()
+    override fun onResume() {
+        super.onResume()
+        // Mỗi lần quay lại (kể cả sau khi đổi cấu hình) thì quét lại.
+        scan()
     }
 
-    /** Mục tiêu luôn là đường dẫn tuyệt đối; SAF chỉ là cách truy cập nó. */
-    private fun hasTarget(): Boolean = prefs.absolutePath.isNotBlank()
-
-    private fun persistConfig() {
-        val raw = binding.etPath.text?.toString()?.trim().orEmpty()
-        if (raw.isNotEmpty()) {
-            val path = CleanerEngine.normalizePath(raw)
-            if (path != raw) binding.etPath.setText(path)
-            prefs.absolutePath = path
-        }
-        prefs.extensionsRaw = (binding.etExtensions.text?.toString()?.trim().orEmpty())
-            .ifEmpty { Prefs.DEFAULT_EXTENSIONS }
-        prefs.recursive = binding.swRecursive.isChecked
-        val hrs = binding.etInterval.text?.toString()?.trim()?.toIntOrNull()
-            ?: Prefs.DEFAULT_INTERVAL_HOURS
-        prefs.autoIntervalHours = hrs.coerceAtLeast(1)
-        if (prefs.autoEnabled && hasTarget()) applyAutoSchedule()
+    private fun spanCount(): Int {
+        val dp = resources.displayMetrics.widthPixels / resources.displayMetrics.density
+        return (dp / 120).toInt().coerceIn(2, 5)
     }
 
-    private fun applyAutoSchedule() {
-        CleanupScheduler.schedule(this, prefs.autoIntervalHours)
+    private fun onMenu(id: Int): Boolean = when (id) {
+        R.id.action_refresh -> { scan(); true }
+        R.id.action_settings -> { openSettings(); true }
+        R.id.action_move_sd -> { startActivity(Intent(this, MoveActivity::class.java)); true }
+        else -> false
     }
 
-    /** Hiện grant nào đang phủ đường dẫn đích, hoặc báo chưa có. */
-    private fun refreshFolderLabel() {
+    private fun openSettings() {
+        startActivity(Intent(this, SettingsActivity::class.java))
+    }
+
+    private fun scan() {
         val grant = CleanerEngine.findGrant(applicationContext, prefs.absolutePath)
-        binding.tvFolder.text = if (grant == null) {
-            getString(R.string.no_folder)
-        } else {
-            getString(R.string.saf_selected, friendlyPath(grant.first))
+        if (grant == null) {
+            showEmpty(getString(R.string.empty_need_grant), getString(R.string.open_settings))
+            return
         }
-    }
 
-    private fun friendlyPath(treeUri: Uri): String {
-        return try {
-            val docId = DocumentsContract.getTreeDocumentId(treeUri)
-            val parts = docId.split(":", limit = 2)
-            val volume = when (parts[0]) {
-                "primary" -> getString(R.string.volume_internal)
-                else -> parts[0]
+        setScanning(true)
+        adapter.clear()
+        current = emptyList()
+
+        lifecycleScope.launch {
+            val exts = prefs.parsedExtensions()
+            val recursive = prefs.recursive
+            val path = prefs.absolutePath
+            val result = withContext(Dispatchers.IO) {
+                CleanerEngine.listConfiguredFiles(applicationContext, path, exts, recursive)
+                    ?: emptyList()
             }
-            val path = parts.getOrNull(1).orEmpty()
-            if (path.isEmpty()) volume else "$volume: $path"
-        } catch (e: Exception) {
-            treeUri.toString()
+            current = result
+            setScanning(false)
+
+            if (result.isEmpty()) {
+                showEmpty(getString(R.string.empty_no_files), null)
+            } else {
+                emptyState.visibility = View.GONE
+                recycler.visibility = View.VISIBLE
+                adapter.submit(result)
+                val bytes = result.sumOf { it.size }
+                tvSummary.text = getString(
+                    R.string.summary_count, result.size, CleanerEngine.formatBytes(bytes)
+                )
+                btnCleanNow.isEnabled = true
+            }
         }
     }
 
-    private fun confirmAndClean() {
-        if (!hasTarget()) {
-            snack(getString(R.string.need_folder_first))
-            return
+    private fun setScanning(scanning: Boolean) {
+        progressScan.visibility = if (scanning) View.VISIBLE else View.GONE
+        if (scanning) {
+            emptyState.visibility = View.GONE
+            btnCleanNow.isEnabled = false
+            tvSummary.text = getString(R.string.scanning)
         }
-        val exts = prefs.parsedExtensions()
-        if (exts.isEmpty()) {
-            snack(getString(R.string.need_extensions))
-            return
-        }
+    }
+
+    private fun showEmpty(message: String, actionLabel: String?) {
+        recycler.visibility = View.GONE
+        emptyState.visibility = View.VISIBLE
+        tvEmpty.text = message
+        btnEmptyAction.visibility = if (actionLabel != null) View.VISIBLE else View.GONE
+        actionLabel?.let { btnEmptyAction.text = it }
+        tvSummary.text = getString(R.string.summary_placeholder)
+        btnCleanNow.isEnabled = false
+    }
+
+    private fun confirmClean() {
+        if (current.isEmpty()) return
+        val bytes = current.sumOf { it.size }
         MaterialAlertDialogBuilder(this)
             .setTitle(R.string.confirm_title)
-            .setMessage(getString(R.string.confirm_message, exts.joinToString(", ") { "*.$it" }))
+            .setMessage(
+                getString(R.string.confirm_message, current.size, CleanerEngine.formatBytes(bytes))
+            )
             .setNegativeButton(R.string.cancel, null)
-            .setPositiveButton(R.string.delete) { _, _ -> startRun(dryRun = false) }
+            .setPositiveButton(R.string.delete) { _, _ -> doClean() }
             .show()
     }
 
-    private fun startRun(dryRun: Boolean) {
-        if (!hasTarget()) {
-            snack(getString(R.string.need_folder_first))
-            return
-        }
-        val exts = prefs.parsedExtensions()
-        if (exts.isEmpty()) {
-            snack(getString(R.string.need_extensions))
-            return
-        }
-        val recursive = binding.swRecursive.isChecked
-        val path = prefs.absolutePath
-
-        setBusy(true)
-        binding.tvResult.text = getString(R.string.running)
-
+    private fun doClean() {
+        val toDelete = current
+        setScanning(true)
         lifecycleScope.launch {
             val result = withContext(Dispatchers.IO) {
-                CleanerEngine.clean(
-                    context = applicationContext,
-                    absolutePath = path,
-                    extensions = exts,
-                    recursive = recursive,
-                    dryRun = dryRun
-                )
+                CleanerEngine.deleteUris(applicationContext, toDelete)
             }
-            setBusy(false)
-            val text = formatResult(result)
-            binding.tvResult.text = text
-            prefs.lastResult = text
-        }
-    }
-
-    private fun formatResult(r: CleanerEngine.Result): String {
-        val sb = StringBuilder()
-        if (r.dryRun) {
-            sb.appendLine(getString(R.string.result_dryrun_header))
-            sb.appendLine(getString(R.string.result_matched, r.matchedCount))
-            sb.appendLine(getString(R.string.result_size, CleanerEngine.formatBytes(r.totalBytes)))
-        } else {
-            sb.appendLine(getString(R.string.result_clean_header))
-            sb.appendLine(getString(R.string.result_deleted, r.deletedCount, r.matchedCount))
-            sb.appendLine(getString(R.string.result_freed, CleanerEngine.formatBytes(r.totalBytes)))
-        }
-        if (r.errors.isNotEmpty()) {
-            sb.appendLine()
-            sb.appendLine(getString(R.string.result_errors, r.errors.size))
-            r.errors.take(10).forEach { sb.appendLine("  - $it") }
-            if (r.errors.size > 10) sb.appendLine("  ...")
-        }
-        return sb.toString().trim()
-    }
-
-    private fun setBusy(busy: Boolean) {
-        binding.progress.visibility = if (busy) android.view.View.VISIBLE else android.view.View.GONE
-        binding.btnDryRun.isEnabled = !busy
-        binding.btnClean.isEnabled = !busy
-        binding.btnBrowse.isEnabled = !busy
-        binding.btnGrant.isEnabled = !busy
-    }
-
-    /**
-     * Chỉ phục vụ các thư mục thường (DCIM, Download...) khi quét bằng java.io.File.
-     *
-     * Với `Android/data` thì quyền này vô nghĩa — kể cả "Truy cập tất cả tệp"
-     * (MANAGE_EXTERNAL_STORAGE) cũng không đọc được, đã thử trên Android 11.
-     * Đường duy nhất là nút "Chọn thư mục (SAF)".
-     */
-    private fun requestStoragePermission() {
-        val perms = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
-        } else {
-            arrayOf(
-                Manifest.permission.READ_EXTERNAL_STORAGE,
-                Manifest.permission.WRITE_EXTERNAL_STORAGE
+            setScanning(false)
+            snack(
+                getString(
+                    R.string.deleted_summary,
+                    result.deletedCount, result.matchedCount,
+                    CleanerEngine.formatBytes(result.totalBytes)
+                )
             )
-        }
-        val allGranted = perms.all {
-            ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED
-        }
-        if (allGranted) {
-            snack(getString(R.string.storage_granted))
-        } else {
-            requestStorage.launch(perms)
+            scan()
         }
     }
 
-    private fun ensureNotifPermission() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            requestNotif.launch(Manifest.permission.POST_NOTIFICATIONS)
+    private fun openItem(item: CleanerEngine.MediaItem) {
+        val mime = if (item.isVideo) "video/*" else "image/*"
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(item.uri, mime)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        try {
+            startActivity(intent)
+        } catch (e: Exception) {
+            snack(getString(R.string.open_failed, item.name))
         }
     }
 
     private fun snack(msg: String) {
-        Snackbar.make(binding.root, msg, Snackbar.LENGTH_LONG).show()
+        Snackbar.make(findViewById(R.id.recycler), msg, Snackbar.LENGTH_LONG).show()
     }
 }

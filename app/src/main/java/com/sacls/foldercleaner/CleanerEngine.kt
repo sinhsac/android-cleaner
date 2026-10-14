@@ -34,6 +34,112 @@ object CleanerEngine {
         val dryRun: Boolean
     )
 
+    /** Một file khớp đuôi, đủ thông tin để hiển thị trên lưới và để xóa. */
+    data class MediaItem(
+        /** URI document (buildDocumentUriUsingTree) — dùng để load thumbnail, mở, hoặc xóa. */
+        val uri: Uri,
+        val name: String,
+        val size: Long,
+        val isVideo: Boolean
+    )
+
+    /**
+     * Liệt kê (KHÔNG xóa) các file khớp đuôi trong một thư mục đã có SAF grant.
+     *
+     * Trả về danh sách để màn hình chính hiển thị lưới thumbnail. Có [onItem] để stream
+     * dần từng file ra UI thay vì đợi quét xong toàn bộ — thư mục nhiều file vẫn mượt.
+     */
+    fun listFiles(
+        context: Context,
+        treeUri: Uri,
+        extensions: List<String>,
+        recursive: Boolean,
+        startDocId: String? = null,
+        onItem: ((MediaItem) -> Unit)? = null
+    ): List<MediaItem> {
+        val out = ArrayList<MediaItem>()
+        if (extensions.isEmpty()) return out
+
+        val resolver = context.contentResolver
+        val extSet = extensions.map { it.lowercase() }.toSet()
+        val rootDocId = startDocId ?: DocumentsContract.getTreeDocumentId(treeUri)
+
+        val dirQueue = ArrayDeque<String>()
+        dirQueue.add(rootDocId)
+
+        val columns = arrayOf(
+            DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+            DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+            DocumentsContract.Document.COLUMN_MIME_TYPE,
+            DocumentsContract.Document.COLUMN_SIZE
+        )
+
+        while (dirQueue.isNotEmpty()) {
+            val parentDocId = dirQueue.removeFirst()
+            val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, parentDocId)
+            val cursor = try {
+                resolver.query(childrenUri, columns, null, null, null)
+            } catch (e: Exception) {
+                null
+            } ?: continue
+
+            cursor.use { c ->
+                val idIdx = c.getColumnIndexOrThrow(DocumentsContract.Document.COLUMN_DOCUMENT_ID)
+                val nameIdx = c.getColumnIndexOrThrow(DocumentsContract.Document.COLUMN_DISPLAY_NAME)
+                val mimeIdx = c.getColumnIndexOrThrow(DocumentsContract.Document.COLUMN_MIME_TYPE)
+                val sizeIdx = c.getColumnIndexOrThrow(DocumentsContract.Document.COLUMN_SIZE)
+
+                while (c.moveToNext()) {
+                    val docId = c.getString(idIdx)
+                    val name = c.getString(nameIdx) ?: ""
+                    val mime = c.getString(mimeIdx)
+                    val size = if (c.isNull(sizeIdx)) 0L else c.getLong(sizeIdx)
+
+                    if (mime == DocumentsContract.Document.MIME_TYPE_DIR) {
+                        if (recursive) dirQueue.add(docId)
+                        continue
+                    }
+
+                    val ext = name.substringAfterLast('.', "").lowercase()
+                    if (ext.isNotEmpty() && extSet.contains(ext)) {
+                        val uri = DocumentsContract.buildDocumentUriUsingTree(treeUri, docId)
+                        val isVideo = (mime?.startsWith("video/") == true) || ext in VIDEO_EXTS
+                        val item = MediaItem(uri, name, size, isVideo)
+                        out.add(item)
+                        onItem?.invoke(item)
+                    }
+                }
+            }
+        }
+        return out
+    }
+
+    /** Xóa một danh sách document URI. Trả về (số xóa được, tổng bytes xóa, lỗi). */
+    fun deleteUris(context: Context, items: List<MediaItem>): Result {
+        val resolver = context.contentResolver
+        var deleted = 0
+        var bytes = 0L
+        val errors = ArrayList<String>()
+        for (item in items) {
+            val ok = try {
+                DocumentsContract.deleteDocument(resolver, item.uri)
+            } catch (e: Exception) {
+                Log.w(TAG, "Xóa thất bại: ${item.name}", e)
+                false
+            }
+            if (ok) {
+                deleted++
+                bytes += item.size
+            } else {
+                errors.add("Xóa thất bại: ${item.name}")
+            }
+        }
+        return Result(items.size, deleted, bytes, errors, dryRun = false)
+    }
+
+    private val VIDEO_EXTS = setOf("mp4", "mkv", "avi", "mov", "3gp", "webm", "flv", "ts", "m4v")
+    private val IMAGE_EXTS = setOf("jpg", "jpeg", "png", "gif", "webp", "bmp", "heic", "heif")
+
     /**
      * Quét (và tùy chọn xóa) file khớp đuôi trong [treeUri].
      *
@@ -280,6 +386,22 @@ object CleanerEngine {
         if (treeDocId == docId) return true
         val base = if (treeDocId.endsWith(":")) treeDocId else "$treeDocId/"
         return docId.startsWith(base)
+    }
+
+    /**
+     * Liệt kê file khớp cho thư mục đã cấu hình, tự tìm SAF grant.
+     * Trả về null nếu chưa có grant (màn chính sẽ hiện trạng thái rỗng, yêu cầu cấp quyền).
+     */
+    fun listConfiguredFiles(
+        context: Context,
+        absolutePath: String,
+        extensions: List<String>,
+        recursive: Boolean,
+        onItem: ((MediaItem) -> Unit)? = null
+    ): List<MediaItem>? {
+        val path = normalizePath(absolutePath)
+        val (treeUri, docId) = findGrant(context, path) ?: return null
+        return listFiles(context, treeUri, extensions, recursive, docId, onItem)
     }
 
     /** Tìm trong các grant đã lưu một cái phủ được [path]. */

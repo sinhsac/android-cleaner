@@ -1,22 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Cần cho Android 13+ để hiện thông báo kết quả dọn tự động. -->
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-
     <!--
-      Thư mục trong Android/data KHÔNG truy cập được bằng quyền lưu trữ, bất kể quyền nào:
-      đã thử trên SM-A507FN/Android 11 với legacy storage (targetSdk 28) và với
-      MANAGE_EXTERNAL_STORAGE ("Truy cập tất cả tệp") — cả hai đều cho listFiles() = null.
-      Cách duy nhất là SAF tree grant, nên app không xin MANAGE_EXTERNAL_STORAGE.
-
-      READ_EXTERNAL_STORAGE chỉ còn dùng cho các thư mục thường (DCIM, Download...) qua
-      java.io.File. WRITE_EXTERNAL_STORAGE là no-op từ API 29 nên giới hạn ở maxSdkVersion.
+      Mọi truy cập file đều qua SAF (content:// URI do người dùng cấp), nên app KHÔNG cần
+      bất kỳ quyền lưu trữ nào: không READ/WRITE_EXTERNAL_STORAGE, không MANAGE_EXTERNAL_STORAGE.
+      Đã xác nhận trên Android 11: Android/data chỉ đọc được qua SAF tree grant.
     -->
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-    <uses-permission
-        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
-        android:maxSdkVersion="28" />
 
     <application
         android:allowBackup="true"
@@ -34,6 +23,16 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".SettingsActivity"
+            android:exported="false"
+            android:parentActivityName=".MainActivity" />
+
+        <activity
+            android:name=".MoveActivity"
+            android:exported="false"
+            android:parentActivityName=".MainActivity" />
 
     </application>
 

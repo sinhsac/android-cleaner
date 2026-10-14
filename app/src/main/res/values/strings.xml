@@ -1,66 +1,55 @@
 <resources>
     <string name="app_name">Folder Cleaner</string>
 
-    <!-- Sections -->
+    <!-- Toolbar / menu -->
+    <string name="action_refresh">Quét lại</string>
+    <string name="action_settings">Cấu hình</string>
+    <string name="open_settings">Mở cấu hình</string>
+    <string name="action_move_sd">Chuyển DCIM sang thẻ SD</string>
+
+    <!-- Màn chính -->
+    <string name="empty_need_grant">Chưa cấp quyền thư mục. Mở Cấu hình, bấm "Chọn thư mục (SAF)" rồi "Sử dụng thư mục này".</string>
+    <string name="empty_no_files">Không có file nào khớp trong thư mục đã cấu hình.</string>
+    <string name="summary_placeholder">—</string>
+    <string name="summary_count">%1$d file · %2$s</string>
+    <string name="scanning">Đang quét…</string>
+    <string name="confirm_title">Xác nhận xóa</string>
+    <string name="confirm_message">Sẽ xóa vĩnh viễn %1$d file (%2$s). Không thể hoàn tác. Tiếp tục?</string>
+    <string name="delete">Xóa</string>
+    <string name="cancel">Hủy</string>
+    <string name="btn_clean">Dọn ngay</string>
+    <string name="deleted_summary">Đã xóa %1$d/%2$d file, giải phóng %3$s.</string>
+    <string name="open_failed">Không mở được file: %1$s</string>
+
+    <!-- Cấu hình -->
+    <string name="section_settings">Cấu hình</string>
     <string name="section_folder">Thư mục cần dọn</string>
-    <string name="section_extensions">Loại file cần xóa</string>
-    <string name="section_actions">Dọn dẹp</string>
-    <string name="section_auto">Dọn tự động</string>
-
-    <!-- Folder: path mode (chính) -->
-    <string name="hint_path">Đường dẫn thư mục cần dọn</string>
-    <string name="helper_path">Dán đường dẫn tuyệt đối, ví dụ /storage/emulated/0/Android/data/com.mm.android.direct.KBVISIONVIEWPlus/files/Download</string>
-    <string name="btn_grant_storage">Cấp quyền truy cập bộ nhớ</string>
-    <string name="storage_granted">Đã có quyền truy cập bộ nhớ.</string>
-    <string name="storage_denied">Chưa được cấp quyền. App sẽ không xóa được file.</string>
-
-    <!-- Folder: SAF — bắt buộc với Android/data trên Android 11 -->
-    <string name="or_use_saf">Với thư mục trong Android/data, bắt buộc cấp quyền qua trình chọn hệ thống. Bấm nút dưới rồi chọn "Sử dụng thư mục này":</string>
-    <string name="no_folder">Chưa cấp quyền cho thư mục này.</string>
-    <string name="saf_selected">SAF: %1$s</string>
     <string name="btn_browse">Chọn thư mục (SAF)</string>
-    <string name="folder_selected">Đã chọn thư mục SAF và cấp quyền.</string>
+    <string name="label_current_folder">Thư mục hiện tại:</string>
+    <string name="no_folder">Chưa chọn.</string>
+    <string name="folder_selected">Đã cấp quyền thư mục.</string>
     <string name="folder_grant_failed">Không giữ được quyền thư mục: %1$s</string>
     <string name="volume_internal">Bộ nhớ máy</string>
-
-    <!-- Extensions -->
+    <string name="section_extensions">Loại file cần xóa</string>
     <string name="hint_extensions">Đuôi file (phân tách bằng dấu phẩy)</string>
     <string name="helper_extensions">Ví dụ: mp4,jpg,jpeg,mkv — không cần dấu chấm.</string>
     <string name="switch_recursive">Quét cả thư mục con</string>
 
-    <!-- Actions -->
-    <string name="btn_dry_run">Quét thử (không xóa)</string>
-    <string name="btn_clean">Dọn ngay</string>
-    <string name="running">Đang xử lý…</string>
-
-    <string name="need_folder_first">Hãy chọn thư mục trước.</string>
-    <string name="need_extensions">Hãy nhập ít nhất một đuôi file.</string>
-
-    <!-- Confirm dialog -->
-    <string name="confirm_title">Xác nhận xóa</string>
-    <string name="confirm_message">Sẽ xóa vĩnh viễn mọi file khớp (%1$s) trong thư mục đã chọn. Không thể hoàn tác. Tiếp tục?</string>
-    <string name="cancel">Hủy</string>
-    <string name="delete">Xóa</string>
-
-    <!-- Result -->
-    <string name="result_dryrun_header">KẾT QUẢ QUÉT THỬ</string>
-    <string name="result_matched">Số file khớp: %1$d</string>
-    <string name="result_size">Tổng dung lượng: %1$s</string>
-    <string name="result_clean_header">ĐÃ DỌN XONG</string>
-    <string name="result_deleted">Đã xóa: %1$d / %2$d file</string>
-    <string name="result_freed">Giải phóng: %1$s</string>
-    <string name="result_errors">Lỗi (%1$d):</string>
-
-    <!-- Auto -->
-    <string name="switch_auto">Tự động dọn định kỳ</string>
-    <string name="hint_interval">Chu kỳ (giờ)</string>
-    <string name="helper_interval">Tối thiểu 1 giờ. Hệ thống có thể trễ vài phút để tiết kiệm pin.</string>
-    <string name="auto_on">Đã bật dọn tự động.</string>
-    <string name="auto_off">Đã tắt dọn tự động.</string>
-
-    <!-- Notification -->
-    <string name="notif_channel_name">Kết quả dọn dẹp</string>
-    <string name="notif_title">Folder Cleaner</string>
-    <string name="notif_summary">Đã xóa %1$d file, giải phóng %2$s.</string>
-    <string name="notif_permission_lost">Mất quyền truy cập thư mục. Hãy mở app và chọn lại thư mục.</string>
+    <!-- Di chuyển sang thẻ SD -->
+    <string name="move_explain">Di chuyển toàn bộ file từ một thư mục nguồn sang thẻ SD. File được chép và kiểm tra khớp kích thước trước, chỉ xóa bản gốc khi chép thành công. File đã có ở đích (cùng tên, cùng dung lượng) sẽ bỏ qua.</string>
+    <string name="move_source">Nguồn (ví dụ Bộ nhớ máy / DCIM / Camera)</string>
+    <string name="move_dest">Đích trên thẻ SD (ví dụ thẻ SD / DCIM / Camera)</string>
+    <string name="move_pick_source">Chọn thư mục nguồn</string>
+    <string name="move_pick_dest">Chọn thư mục đích trên thẻ SD</string>
+    <string name="move_start">Bắt đầu di chuyển</string>
+    <string name="move_scanning">Đang đọc danh sách file nguồn…</string>
+    <string name="move_nothing">Thư mục nguồn không có file nào.</string>
+    <string name="move_progress_title">Đang chuyển %1$d/%2$d: %3$s</string>
+    <string name="move_progress_detail">%1$s / %2$s · đã chuyển %3$d · bỏ qua %4$d · lỗi %5$d</string>
+    <string name="move_done">Xong: chuyển %1$d, bỏ qua %2$d, lỗi %3$d (tổng %4$d file).</string>
+    <string name="move_confirm_title">Xác nhận di chuyển</string>
+    <string name="move_confirm_msg">Di chuyển %1$d file (%2$s) sang thẻ SD. Bản gốc chỉ bị xóa sau khi chép xong và khớp kích thước. Tiếp tục?</string>
+    <string name="move_same_tree">Nguồn và đích đang trỏ cùng một thư mục. Hãy chọn đích khác (trên thẻ SD).</string>
+    <string name="storage_granted">Đã có quyền truy cập.</string>
+    <string name="storage_denied">Chưa được cấp quyền.</string>
 </resources>

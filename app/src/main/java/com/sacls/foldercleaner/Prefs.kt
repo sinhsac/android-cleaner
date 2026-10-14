@@ -9,7 +9,7 @@ import android.content.Context
  *   `contentResolver.persistedUriPermissions` (xem [CleanerEngine.findGrant]).
  * - extensions: danh sách đuôi file cần xóa, phân tách bằng dấu phẩy.
  * - recursive: có quét thư mục con hay không.
- * - autoEnabled / autoIntervalHours: cấu hình dọn tự động.
+ * - moveDestUri: thư mục đích (thẻ SD) cho tính năng di chuyển DCIM.
  */
 class Prefs(context: Context) {
 
@@ -32,17 +32,15 @@ class Prefs(context: Context) {
         get() = sp.getBoolean(KEY_RECURSIVE, true)
         set(value) = sp.edit().putBoolean(KEY_RECURSIVE, value).apply()
 
-    var autoEnabled: Boolean
-        get() = sp.getBoolean(KEY_AUTO_ENABLED, false)
-        set(value) = sp.edit().putBoolean(KEY_AUTO_ENABLED, value).apply()
+    /** URI tree nguồn cho tính năng di chuyển DCIM/Camera. */
+    var moveSrcUri: String?
+        get() = sp.getString(KEY_MOVE_SRC, null)
+        set(value) = sp.edit().putString(KEY_MOVE_SRC, value).apply()
 
-    var autoIntervalHours: Int
-        get() = sp.getInt(KEY_AUTO_INTERVAL, DEFAULT_INTERVAL_HOURS)
-        set(value) = sp.edit().putInt(KEY_AUTO_INTERVAL, value).apply()
-
-    var lastResult: String?
-        get() = sp.getString(KEY_LAST_RESULT, null)
-        set(value) = sp.edit().putString(KEY_LAST_RESULT, value).apply()
+    /** URI tree đích (thẻ SD) cho tính năng di chuyển DCIM/Camera. */
+    var moveDestUri: String?
+        get() = sp.getString(KEY_MOVE_DEST, null)
+        set(value) = sp.edit().putString(KEY_MOVE_DEST, value).apply()
 
     /**
      * Chuẩn hóa danh sách đuôi file: bỏ khoảng trắng, bỏ dấu chấm đầu, chữ thường, loại trùng/rỗng.
@@ -56,7 +54,6 @@ class Prefs(context: Context) {
 
     companion object {
         const val DEFAULT_EXTENSIONS = "mp4,jpg"
-        const val DEFAULT_INTERVAL_HOURS = 24
         /**
          * Thư mục KBVISION VIEW Plus lưu video/ảnh tải về.
          * Xác nhận trực tiếp trên máy qua adb (SM-A507FN, Android 11):
@@ -70,8 +67,7 @@ class Prefs(context: Context) {
         private const val KEY_ABS_PATH = "abs_path"
         private const val KEY_EXTENSIONS = "extensions"
         private const val KEY_RECURSIVE = "recursive"
-        private const val KEY_AUTO_ENABLED = "auto_enabled"
-        private const val KEY_AUTO_INTERVAL = "auto_interval_hours"
-        private const val KEY_LAST_RESULT = "last_result"
+        private const val KEY_MOVE_SRC = "move_src_uri"
+        private const val KEY_MOVE_DEST = "move_dest_uri"
     }
 }

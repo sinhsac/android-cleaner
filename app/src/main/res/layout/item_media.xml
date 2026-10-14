@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.sacls.foldercleaner.SquareFrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="4dp"
+    android:background="@drawable/bg_grid_cell"
+    android:foreground="?attr/selectableItemBackground">
+
+    <!-- Ảnh thumbnail (ảnh thật) hoặc nền cho video -->
+    <ImageView
+        android:id="@+id/thumb"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop"
+        android:contentDescription="@null" />
+
+    <!-- Icon video chồng lên khi là video -->
+    <ImageView
+        android:id="@+id/playBadge"
+        android:layout_width="44dp"
+        android:layout_height="44dp"
+        android:layout_gravity="center"
+        android:src="@drawable/ic_play"
+        android:alpha="0.9"
+        android:visibility="gone"
+        android:contentDescription="@null" />
+
+    <!-- Dải tối dưới đáy để chữ dễ đọc -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="36dp"
+        android:layout_gravity="bottom"
+        android:background="@drawable/scrim_bottom" />
+
+    <TextView
+        android:id="@+id/tvName"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:padding="6dp"
+        android:maxLines="1"
+        android:ellipsize="middle"
+        android:textColor="@color/white"
+        android:textSize="11sp" />
+</com.sacls.foldercleaner.SquareFrameLayout>

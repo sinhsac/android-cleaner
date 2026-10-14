@@ -1,13 +1,48 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Thùng rác đơn giản, trắng, trên nền adaptive -->
+
+    <!--
+      Thùng rác hiện đại nằm trong vùng an toàn (~30..78) của adaptive icon.
+      Màu trắng ngả nhẹ gradient cho có chiều sâu; thêm vài sparkle gợi ý "sạch sẽ".
+    -->
+
+    <!-- Nắp thùng + tay cầm -->
     <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M46,30 h16 l2,4 h12 v6 h-60 v-6 h12 z" />
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M46,33 l1.6,-2.8 a3,3 0 0 1 2.6,-1.5 h7.6 a3,3 0 0 1 2.6,1.5 l1.6,2.8 z" />
     <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M34,44 h40 l-4,36 a4,4 0 0 1 -4,4 h-24 a4,4 0 0 1 -4,-4 z M44,50 v26 M54,50 v26 M64,50 v26" />
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M38,35.5 h32 a2.4,2.4 0 0 1 2.4,2.4 v1.2 a2.4,2.4 0 0 1 -2.4,2.4 h-32 a2.4,2.4 0 0 1 -2.4,-2.4 v-1.2 a2.4,2.4 0 0 1 2.4,-2.4 z" />
+
+    <!-- Thân thùng, bo góc dưới, gradient trắng -> xám rất nhạt -->
+    <path android:pathData="M40,45 h28 l-2.4,30 a4,4 0 0 1 -4,3.6 h-15.2 a4,4 0 0 1 -4,-3.6 z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="40" android:startY="45"
+                android:endX="54" android:endY="79">
+                <item android:offset="0.0" android:color="#FFFFFFFF" />
+                <item android:offset="1.0" android:color="#FFDDE8E4" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Ba đường dọc trên thân (màu nền tạo rãnh) -->
+    <path android:fillColor="#FF2E6B5E"
+        android:pathData="M47,51 a1,1 0 0 1 2,0 l-0.5,20 a0.9,0.9 0 0 1 -1,0 z" />
+    <path android:fillColor="#FF2E6B5E"
+        android:pathData="M53,51 a1,1 0 0 1 2,0 l0,20 a0.9,0.9 0 0 1 -2,0 z" />
+    <path android:fillColor="#FF2E6B5E"
+        android:pathData="M59,51 a1,1 0 0 1 2,0 l0.5,20 a0.9,0.9 0 0 1 -1,0 z" />
+
+    <!-- Sparkle lớn góc trên-phải (gợi ý sạch sẽ) -->
+    <path android:fillColor="#FFFFFFFF"
+        android:pathData="M72,30 l1.6,4.2 4.2,1.6 -4.2,1.6 -1.6,4.2 -1.6,-4.2 -4.2,-1.6 4.2,-1.6 z" />
+    <!-- Sparkle nhỏ -->
+    <path android:fillColor="#FFFFFFFF"
+        android:pathData="M34,58 l1,2.6 2.6,1 -2.6,1 -1,2.6 -1,-2.6 -2.6,-1 2.6,-1 z" />
 </vector>
