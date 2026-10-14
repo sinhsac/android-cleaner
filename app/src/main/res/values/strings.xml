@@ -1,0 +1,57 @@
+<resources>
+    <string name="app_name">Folder Cleaner</string>
+
+    <!-- Sections -->
+    <string name="section_folder">Thư mục cần dọn</string>
+    <string name="section_extensions">Loại file cần xóa</string>
+    <string name="section_actions">Dọn dẹp</string>
+    <string name="section_auto">Dọn tự động</string>
+
+    <!-- Folder -->
+    <string name="no_folder">Chưa chọn thư mục. Bấm \"Chọn thư mục\" để chọn thư mục Kabe View (ví dụ Android/data/…).</string>
+    <string name="btn_browse">Chọn thư mục</string>
+    <string name="folder_selected">Đã chọn thư mục và cấp quyền.</string>
+    <string name="folder_grant_failed">Không giữ được quyền thư mục: %1$s</string>
+    <string name="volume_internal">Bộ nhớ máy</string>
+
+    <!-- Extensions -->
+    <string name="hint_extensions">Đuôi file (phân tách bằng dấu phẩy)</string>
+    <string name="helper_extensions">Ví dụ: mp4,jpg,jpeg,mkv — không cần dấu chấm.</string>
+    <string name="switch_recursive">Quét cả thư mục con</string>
+
+    <!-- Actions -->
+    <string name="btn_dry_run">Quét thử (không xóa)</string>
+    <string name="btn_clean">Dọn ngay</string>
+    <string name="running">Đang xử lý…</string>
+
+    <string name="need_folder_first">Hãy chọn thư mục trước.</string>
+    <string name="need_extensions">Hãy nhập ít nhất một đuôi file.</string>
+
+    <!-- Confirm dialog -->
+    <string name="confirm_title">Xác nhận xóa</string>
+    <string name="confirm_message">Sẽ xóa vĩnh viễn mọi file khớp (%1$s) trong thư mục đã chọn. Không thể hoàn tác. Tiếp tục?</string>
+    <string name="cancel">Hủy</string>
+    <string name="delete">Xóa</string>
+
+    <!-- Result -->
+    <string name="result_dryrun_header">KẾT QUẢ QUÉT THỬ</string>
+    <string name="result_matched">Số file khớp: %1$d</string>
+    <string name="result_size">Tổng dung lượng: %1$s</string>
+    <string name="result_clean_header">ĐÃ DỌN XONG</string>
+    <string name="result_deleted">Đã xóa: %1$d / %2$d file</string>
+    <string name="result_freed">Giải phóng: %1$s</string>
+    <string name="result_errors">Lỗi (%1$d):</string>
+
+    <!-- Auto -->
+    <string name="switch_auto">Tự động dọn định kỳ</string>
+    <string name="hint_interval">Chu kỳ (giờ)</string>
+    <string name="helper_interval">Tối thiểu 1 giờ. Hệ thống có thể trễ vài phút để tiết kiệm pin.</string>
+    <string name="auto_on">Đã bật dọn tự động.</string>
+    <string name="auto_off">Đã tắt dọn tự động.</string>
+
+    <!-- Notification -->
+    <string name="notif_channel_name">Kết quả dọn dẹp</string>
+    <string name="notif_title">Folder Cleaner</string>
+    <string name="notif_summary">Đã xóa %1$d file, giải phóng %2$s.</string>
+    <string name="notif_permission_lost">Mất quyền truy cập thư mục. Hãy mở app và chọn lại thư mục.</string>
+</resources>

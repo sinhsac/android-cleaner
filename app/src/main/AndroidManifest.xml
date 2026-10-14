@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!--
+      Lưu ý về quyền:
+      - App chủ yếu truy cập file qua SAF (OPEN_DOCUMENT_TREE) nên KHÔNG bắt buộc
+        xin quyền lưu trữ. Quyền truy cập thư mục được cấp qua persistable URI.
+      - POST_NOTIFICATIONS cần cho Android 13+ để hiển thị thông báo kết quả dọn tự động.
+    -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.FolderCleaner">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+    </application>
+
+</manifest>
